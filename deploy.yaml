@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpu-shm-webhook
+  namespace: kube-system
+  labels:
+    app: gpu-shm-webhook 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gpu-shm-webhook
+      app.kubernetes.io/component: webhook
+      app.kubernetes.io/instance: gpu-shm-webhook
+      app.kubernetes.io/name: webhook
+  template:
+    metadata:
+      labels:
+        app: gpu-shm-webhook
+        app.kubernetes.io/component: webhook
+        app.kubernetes.io/instance: gpu-shm-webhook
+        app.kubernetes.io/name: webhook
+    spec:
+      automountServiceAccountToken: true
+      containers:
+        - name: gpu-shm-webhook 
+          image: your-docker-registry/gpu-shm-webhook:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8443
+              protocol: TCP
+          env:
+            - name: FLASK_ENV
+              value: production
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            successThreshold: 1
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            successThreshold: 1
+            periodSeconds: 10
+            timeoutSeconds: 3
+          volumeMounts:
+          - mountPath: /etc/webhook/certs
+            mountPropagation: None
+            name: pod-mutator-webhook-cert
+            readOnly: true
+      volumes:
+        - name: gpu-shm-webhook-cert
+          secret:
+            defaultMode: 420
+            optional: false
+            secretName: gpu-shm-webhook-tls

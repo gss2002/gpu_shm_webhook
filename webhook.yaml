@@ -1,0 +1,40 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: gpu-shm-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: kube-system/gpu-shm-webhook-tls
+webhooks:
+  - name: gpu-shm-webhook
+    clientConfig:
+      service:
+        name: gpu-shm-webhook
+        namespace: kube-system
+        path: /mutate
+        port: 443
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+      - operations: ["CREATE"]
+        apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        resources: ["deployments", "statefulsets"]
+      - operations: ["CREATE"]
+        apiGroups: ["batch"]
+        apiVersions: ["v1"]
+        resources: ["jobs"]
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - gpu-operator
+            - ingress-nginx
+            - tigera-operator
+    failurePolicy: Ignore
+    sideEffects: None
+    admissionReviewVersions: ["v1","v1beta1"]
+    timeoutSeconds: 10

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gpu-shm-webhook
+  namespace: kube-system
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/instance: gpu-shm-webhook
+    app.kubernetes.io/name: webhook
+  sessionAffinity: None
+  type: ClusterIP
