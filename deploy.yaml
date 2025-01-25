@@ -62,7 +62,7 @@ spec:
           volumeMounts:
           - mountPath: /etc/webhook/certs
             mountPropagation: None
-            name: pod-mutator-webhook-cert
+            name: gpu-shm-webhook-cert
             readOnly: true
       volumes:
         - name: gpu-shm-webhook-cert
