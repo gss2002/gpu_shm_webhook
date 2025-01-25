@@ -5,7 +5,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: kube-system/gpu-shm-webhook-tls
 webhooks:
-  - name: gpu-shm-webhook
+  - name: gpu-shm-webhook.example.org
     clientConfig:
       service:
         name: gpu-shm-webhook
@@ -34,6 +34,14 @@ webhooks:
             - gpu-operator
             - ingress-nginx
             - tigera-operator
+            - calico-system
+            - kubernetes-dashboard
+            - metallb-system
+            - dex
+            - kube-public
+            - cert-manager
+            - mqtt
+            - nifi
     failurePolicy: Ignore
     sideEffects: None
     admissionReviewVersions: ["v1","v1beta1"]
