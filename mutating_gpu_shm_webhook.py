@@ -44,6 +44,11 @@ def mutate_pod_spec(pod_spec):
             container["securityContext"]["capabilities"] = {"add": []}
         container["securityContext"]["capabilities"]["add"].extend(["IPC_LOCK", "SYS_NICE"])
 
+def check_gpu_selector(pod_spec):
+    """Check if the pod spec includes a node selector for NVIDIA GPU product."""
+    node_selector = pod_spec.get("nodeSelector", {})
+    return "nvidia.com/gpu.product" in node_selector
+
 @app.route('/mutate', methods=['POST'])
 def mutate():
     """Handle mutation requests."""
@@ -58,9 +63,9 @@ def mutate():
     }
 
     try:
-        # Get the namespace and validate the namespace name
+        # Get the namespace and validate against both patterns
         namespace = admission_review["request"]["namespace"]
-        if not re.match(r"^ke-.*", namespace):
+        if not (namespace == "hpadmin" or re.match(r"^gs-.*", namespace)):
             # Skip mutation for non-matching namespaces
             return jsonify(response)
 
@@ -76,9 +81,8 @@ def mutate():
             # Unsupported resource type
             return jsonify(response)
 
-        # Check node selector for GPU nodes
-        node_selector = pod_spec.get("nodeSelector", {})
-        if node_selector.get("node.kubernetes.io/gpu") == "true":
+        # Check if the pod spec includes a node selector for NVIDIA GPU product
+        if check_gpu_selector(pod_spec):
             # Mutate the pod spec
             mutate_pod_spec(pod_spec)
 
@@ -130,7 +134,7 @@ def mutate():
 
 @app.route('/healthz', methods=['GET'])
 def healthz():
-   return "ok", 200
+    return "ok", 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=443, ssl_context=('/etc/webhook/certs/tls.crt', '/etc/webhook/certs/tls.key'))
+    app.run(host='0.0.0.0', port=8443, ssl_context=('/etc/webhook/certs/tls.crt', '/etc/webhook/certs/tls.key'))
