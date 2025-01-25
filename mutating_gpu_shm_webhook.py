@@ -44,10 +44,11 @@ def mutate_pod_spec(pod_spec):
             container["securityContext"]["capabilities"] = {"add": []}
         container["securityContext"]["capabilities"]["add"].extend(["IPC_LOCK", "SYS_NICE"])
 
-def check_gpu_selector(pod_spec):
-    """Check if the pod spec includes a node selector for NVIDIA GPU product."""
-    node_selector = pod_spec.get("nodeSelector", {})
-    return "nvidia.com/gpu.product" in node_selector
+def check_gpu_selector(resource_spec):
+    """Check if the resource spec includes a matchLabels selector for NVIDIA GPU product."""
+    selector = resource_spec.get("selector", {})
+    match_labels = selector.get("matchLabels", {})
+    return "nvidia.com/gpu.product" in match_labels
 
 @app.route('/mutate', methods=['POST'])
 def mutate():
@@ -72,17 +73,23 @@ def mutate():
         # Get the resource kind
         resource_kind = admission_review["request"]["kind"]["kind"]
 
-        # Extract the pod spec depending on the resource type
+        # Extract the resource spec depending on the resource type
         if resource_kind == "Pod":
-            pod_spec = admission_review["request"]["object"]["spec"]
+            resource_spec = admission_review["request"]["object"]["spec"]
         elif resource_kind in {"Deployment", "StatefulSet", "Job"}:
-            pod_spec = admission_review["request"]["object"]["spec"]["template"]["spec"]
+            resource_spec = admission_review["request"]["object"]["spec"]
         else:
             # Unsupported resource type
             return jsonify(response)
 
-        # Check if the pod spec includes a node selector for NVIDIA GPU product
-        if check_gpu_selector(pod_spec):
+        # Check if the resource spec includes a matchLabels selector for NVIDIA GPU product
+        if check_gpu_selector(resource_spec):
+            # For resources like Deployment, StatefulSet, or Job, we need to get the pod spec from the template
+            if resource_kind in {"Deployment", "StatefulSet", "Job"}:
+                pod_spec = resource_spec["template"]["spec"]
+            else:  # For Pod, the resource_spec is the pod_spec
+                pod_spec = resource_spec
+
             # Mutate the pod spec
             mutate_pod_spec(pod_spec)
 
